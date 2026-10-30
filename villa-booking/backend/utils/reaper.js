@@ -3,8 +3,9 @@ const { addHistory } = require('./bookingHistory');
 
 /**
  * Expire any PAYMENT_PENDING bookings whose payment-hold window has elapsed.
- * Releases their dates back to Available. Called periodically (and lazily
- * before reads) so a stale hold never blocks the calendar forever.
+ * Releases their dates back to Available. Called lazily before calendar reads
+ * and the sales bookings list (no background timer — correctness must not
+ * depend on one, especially on serverless).
  */
 const expirePaymentHolds = async (now = new Date()) => {
   const expired = await Booking.find({

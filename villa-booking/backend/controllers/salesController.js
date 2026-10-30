@@ -7,6 +7,7 @@ const { addHistory, notifyAllSales } = require('../utils/bookingHistory');
 const { notify } = require('../utils/notify');
 const razorpay = require('../utils/razorpay');
 const { holdExpiryFor, PAYMENT_HOLD_MINUTES } = require('../config/payment');
+const { expirePaymentHolds } = require('../utils/reaper');
 const nightsBetween = (checkIn, checkOut) => {
   const a = new Date(checkIn);
   const b = new Date(checkOut);
@@ -96,6 +97,10 @@ const applyQuotation = (booking, pricing) => {
 
 const listBookings = async (req, res) => {
   try {
+    // Lazy payment-hold expiry before listing, so stale PAYMENT_PENDING holds
+    // show as EXPIRED without any background timer.
+    await expirePaymentHolds();
+
     const { page = 1, limit = 50, review, booking, payment, search, status } = req.query;
     const query = {};
 

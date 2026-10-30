@@ -6,7 +6,6 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
-const { expirePaymentHolds } = require('./utils/reaper');
 
 dotenv.config();
 
@@ -41,19 +40,13 @@ app.get('/api/health', (req, res) => {
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// On Vercel the app is exported from api/index.js as a serverless function —
+// no listen, no timers (payment-hold expiry is now lazy, see utils/reaper.js).
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-// Periodically expire payment holds that never got paid, so they don't
-// indefinitely block the calendar. Mirrors the Razorpay webhook's
-// payment_link.expired handling for locally-originated holds.
-const PAYMENT_HOLD_REAPER_MS = 30 * 1000;
-setInterval(async () => {
-  try {
-    await expirePaymentHolds();
-  } catch (e) {
-    console.error('Payment hold reaper error:', e.message);
-  }
-}, PAYMENT_HOLD_REAPER_MS);
+module.exports = app;

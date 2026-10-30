@@ -1,4 +1,5 @@
 const Booking = require('../models/Booking');
+const { expirePaymentHolds } = require('./reaper');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -50,6 +51,10 @@ const dateRangesOverlap = (aIn, aOut, bIn, bOut) => aIn < bOut && bIn < aOut;
  * may request the same range and the first successful payment wins.
  */
 const buildAvailability = async ({ villa, from, to, now = new Date() }) => {
+  // Lazy payment-hold expiry: flip stale PAYMENT_PENDING holds to EXPIRED so
+  // they never block the calendar. Replaces the old 30s setInterval reaper.
+  await expirePaymentHolds(now);
+
   const dayMs = daysInRange(from, to);
   const state = {};
   dayMs.forEach((ms) => { state[dateKey(ms)] = 'AVAILABLE'; });
